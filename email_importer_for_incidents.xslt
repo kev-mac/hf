@@ -13,12 +13,12 @@
   <!-- INCLUDE INCIDENT TEMPLATE FILES                              -->
   <!-- ============================================================ -->
 
-  <xsl:include href="Incident_Standard.xsl"/>
-  <xsl:include href="Incident_IAM.xsl"/>
-  <xsl:include href="Incident_Epic.xsl"/>
-  <xsl:include href="Incident_ITSM.xsl"/>
-  <xsl:include href="Incident_Security.xsl"/>
-
+  <xsl:include href="incident_iam.xsl"/>
+  <xsl:include href="incident_epic.xsl"/>
+  <xsl:include href="incident_itsm.xsl"/>
+  <xsl:include href="incident_security.xsl"/>
+  <xsl:include href="incident_standard.xsl"/>
+  
   <xsl:output method="xml" indent="yes"/>
 
   <xsl:template match="/">
@@ -81,7 +81,7 @@
         <xsl:when test="
           contains($subject,'this is a test')
         ">
-          <xsl:call-template name="Incident_IAM"/>
+          <xsl:call-template name="incident_iam"/>
         </xsl:when>
 
         <!-- ROUTE: EPIC INCIDENT -->
@@ -90,7 +90,7 @@
           or contains($subject,'vpn issue')
           or contains($subject,'connectivity issue')
         ">
-          <xsl:call-template name="Incident_Epic"/>
+          <xsl:call-template name="incident_epic"/>
         </xsl:when>
 
         <!-- ROUTE: ITSM INCIDENT -->
@@ -99,7 +99,7 @@
           or contains($subject,'app not working')
           or contains($subject,'system error')
         ">
-          <xsl:call-template name="Incident_ITSM"/>
+          <xsl:call-template name="incident_itsm"/>
         </xsl:when>
 
         <!-- ROUTE: SECURITY INCIDENT -->
@@ -108,12 +108,12 @@
           or contains($subject,'suspicious email')
           or contains($subject,'security alert')
         ">
-          <xsl:call-template name="Incident_Security"/>
+          <xsl:call-template name="incident_security"/>
         </xsl:when>
 
         <!-- DEFAULT: STANDARD INCIDENT -->
         <xsl:otherwise>
-          <xsl:call-template name="Incident_Standard"/>
+          <xsl:call-template name="incident_standard"/>
         </xsl:otherwise>
 
       </xsl:choose>
