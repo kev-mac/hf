@@ -4,25 +4,29 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <!--
+    ================================================================
     EMAIL IMPORT ROUTER - INCIDENTS ONLY
-
-    PURPOSE:
-    This file ONLY routes incoming emails to the correct
-    Incident template.
-
-    It does NOT build the Incident itself.
+    ================================================================
   -->
 
-  <!-- INCLUDE ALL INCIDENT TEMPLATE FILES -->
-  <xsl:include href="incident_standard.xsl"/>
-  <xsl:include href="incident_iam.xsl"/>
-  <xsl:include href="incident_epic.xsl"/>
-  
+  <!-- ============================================================ -->
+  <!-- INCLUDE INCIDENT TEMPLATE FILES                              -->
+  <!-- ============================================================ -->
+
+  <xsl:include href="Incident_Standard.xsl"/>
+  <xsl:include href="Incident_IAM.xsl"/>
+  <xsl:include href="Incident_Epic.xsl"/>
+  <xsl:include href="Incident_ITSM.xsl"/>
+  <xsl:include href="Incident_Security.xsl"/>
+
   <xsl:output method="xml" indent="yes"/>
 
   <xsl:template match="/">
 
-    <!-- NORMALIZE EMAIL FROM -->
+    <!-- ========================================================== -->
+    <!-- NORMALIZE EMAIL FROM                                       -->
+    <!-- ========================================================== -->
+
     <xsl:variable name="fromRaw">
       <xsl:choose>
         <xsl:when test="string(BusinessObjectList/BusinessObject/EmailMessage/From)">
@@ -35,13 +39,14 @@
     </xsl:variable>
 
     <xsl:variable name="from"
-      select="translate(
-        normalize-space(string($fromRaw)),
+      select="translate(normalize-space(string($fromRaw)),
         'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'abcdefghijklmnopqrstuvwxyz'
-      )" />
+        'abcdefghijklmnopqrstuvwxyz')" />
 
-    <!-- NORMALIZE EMAIL SUBJECT -->
+    <!-- ========================================================== -->
+    <!-- NORMALIZE EMAIL SUBJECT                                    -->
+    <!-- ========================================================== -->
+
     <xsl:variable name="subjectRaw">
       <xsl:choose>
         <xsl:when test="string(BusinessObjectList/BusinessObject/EmailMessage/Subject)">
@@ -54,18 +59,22 @@
     </xsl:variable>
 
     <xsl:variable name="subject"
-      select="translate(
-        normalize-space(string($subjectRaw)),
+      select="translate(normalize-space(string($subjectRaw)),
         'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        'abcdefghijklmnopqrstuvwxyz'
-      )" />
+        'abcdefghijklmnopqrstuvwxyz')" />
 
-    <!-- MAIN OUTPUT WRAPPER -->
+    <!-- ========================================================== -->
+    <!-- OUTPUT ROOT                                                -->
+    <!-- ========================================================== -->
+
     <BusinessObjectList SchemaVersion="1.0"
       xsi:noNamespaceSchemaLocation="HierarchicalObjects-1.0.xsd"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
-      <!-- INCIDENT ROUTING LOGIC -->
+      <!-- ======================================================== -->
+      <!-- INCIDENT ROUTING LOGIC                                   -->
+      <!-- ======================================================== -->
+
       <xsl:choose>
 
         <!-- ROUTE: IAM INCIDENT -->
@@ -73,7 +82,7 @@
           ($from = 'kevin.mcgowan@hf.org')
           and contains($subject,'this is a test')
         ">
-          <xsl:call-template name="incident_iam"/>
+          <xsl:call-template name="Incident_IAM"/>
         </xsl:when>
 
         <!-- ROUTE: EPIC INCIDENT -->
@@ -82,16 +91,16 @@
           or contains($subject,'vpn issue')
           or contains($subject,'connectivity issue')
         ">
-          <xsl:call-template name="incident_epic"/>
+          <xsl:call-template name="Incident_Epic"/>
         </xsl:when>
 
-        <!-- ROUTE: APPLICATION INCIDENT -->
+        <!-- ROUTE: ITSM INCIDENT -->
         <xsl:when test="
           contains($subject,'application error')
           or contains($subject,'app not working')
           or contains($subject,'system error')
         ">
-          <xsl:call-template name="incident_itsm"/>
+          <xsl:call-template name="Incident_ITSM"/>
         </xsl:when>
 
         <!-- ROUTE: SECURITY INCIDENT -->
@@ -100,12 +109,12 @@
           or contains($subject,'suspicious email')
           or contains($subject,'security alert')
         ">
-          <xsl:call-template name="incident_security"/>
+          <xsl:call-template name="Incident_Security"/>
         </xsl:when>
 
-        <!-- DEFAULT: NO MATCH -->
+        <!-- DEFAULT: STANDARD INCIDENT -->
         <xsl:otherwise>
-          <!-- No Incident created -->
+          <xsl:call-template name="Incident_Standard"/>
         </xsl:otherwise>
 
       </xsl:choose>
