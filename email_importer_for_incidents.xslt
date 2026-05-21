@@ -79,8 +79,7 @@
 
         <!-- ROUTE: IAM INCIDENT -->
         <xsl:when test="
-          ($from = 'kevin.mcgowan@hf.org')
-          and contains($subject,'this is a test')
+          contains($subject,'this is a test')
         ">
           <xsl:call-template name="Incident_IAM"/>
         </xsl:when>
