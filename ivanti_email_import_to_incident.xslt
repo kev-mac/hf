@@ -3,13 +3,30 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
+  <!--
+    ================================================================
+    EMAIL IMPORT ROUTER - INCIDENTS ONLY
+    ================================================================
+  -->
+
+  <!-- ============================================================ -->
+  <!-- INCLUDE INCIDENT TEMPLATE FILES                              -->
+  <!-- ============================================================ -->
+
+  <xsl:include href="Incident_Standard.xsl"/>
+  <xsl:include href="Incident_IAM.xsl"/>
+  <xsl:include href="Incident_Epic.xsl"/>
+  <xsl:include href="Incident_ITSM.xsl"/>
+  <xsl:include href="Incident_Security.xsl"/>
+
   <xsl:output method="xml" indent="yes"/>
 
   <xsl:template match="/">
 
-    <!-- =========================================================== -->
-    <!-- INCOMING EMAIL 'FROM' EXTRACTION                            -->
-    <!-- =========================================================== -->
+    <!-- ========================================================== -->
+    <!-- NORMALIZE EMAIL FROM                                       -->
+    <!-- ========================================================== -->
+
     <xsl:variable name="fromRaw">
       <xsl:choose>
         <xsl:when test="string(BusinessObjectList/BusinessObject/EmailMessage/From)">
@@ -23,12 +40,13 @@
 
     <xsl:variable name="from"
       select="translate(normalize-space(string($fromRaw)),
-               'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')" />
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'abcdefghijklmnopqrstuvwxyz')" />
 
+    <!-- ========================================================== -->
+    <!-- NORMALIZE EMAIL SUBJECT                                    -->
+    <!-- ========================================================== -->
 
-    <!-- =========================================================== -->
-    <!-- INCOMING EMAIL 'SUBJECT' EXTRACTION                         -->
-    <!-- =========================================================== -->
     <xsl:variable name="subjectRaw">
       <xsl:choose>
         <xsl:when test="string(BusinessObjectList/BusinessObject/EmailMessage/Subject)">
@@ -42,116 +60,67 @@
 
     <xsl:variable name="subject"
       select="translate(normalize-space(string($subjectRaw)),
-               'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')" />
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'abcdefghijklmnopqrstuvwxyz')" />
 
+    <!-- ========================================================== -->
+    <!-- OUTPUT ROOT                                                -->
+    <!-- ========================================================== -->
 
-    <!-- =========================================================== -->
-    <!-- EMAIL BODY + PARSED FIELDS                                  -->
-    <!-- =========================================================== -->
-
-    <!-- Full Email Body -->
-    <xsl:variable name="body"
-      select="string(BusinessObjectList/BusinessObject/EmailMessage/Body)"/>
-
-    <!-- First Name -->
-    <xsl:variable name="firstRaw"
-      select="substring-after($body, 'First Name: ')"/>
-
-    <xsl:variable name="firstName"
-      select="normalize-space(substring-before($firstRaw, '&#10;'))"/>
-
-    <!-- Last Name -->
-    <xsl:variable name="lastRaw"
-      select="substring-after($body, 'Last Name: ')"/>
-
-    <xsl:variable name="lastName"
-      select="normalize-space(substring-before($lastRaw, '&#10;'))"/>
-
-
-    <!-- =========================================================== -->
-    <!-- OUTPUT ROOT                                                 -->
-    <!-- =========================================================== -->
     <BusinessObjectList SchemaVersion="1.0"
       xsi:noNamespaceSchemaLocation="HierarchicalObjects-1.0.xsd"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
+      <!-- ======================================================== -->
+      <!-- INCIDENT ROUTING LOGIC                                   -->
+      <!-- ======================================================== -->
+
       <xsl:choose>
 
-        <!-- ======================================================= -->
-        <!-- INCIDENT ROUTING                                        -->
-        <!-- ======================================================= -->
+        <!-- ROUTE: IAM INCIDENT -->
         <xsl:when test="
-             ($from = 'kevin.mcgowan@hf.org')
-             and contains($subject,'this is a test')
+          ($from = 'kevin.mcgowan@hf.org')
+          and contains($subject,'this is a test')
         ">
-
-          <BusinessObject Name="Incident">
-            <Transaction>Insert</Transaction>
-
-            <UniqueKeyList>
-              <UniqueKey>
-                <Field Name="IncidentNumber"/>
-              </UniqueKey>
-            </UniqueKeyList>
-
-            <FieldList>
-
-              <!-- Owner team -->
-              <Field Name="OwnerTeam" Type="System.String">IAM Engineering</Field>
-
-              <!-- Subject = pulled from email subject -->
-              <Field Name="Subject" Type="System.String">
-                <xsl:value-of select="$subjectRaw"/>
-              </Field>
-
-              <!-- Symptom = short description of the issue (incident-specific) -->
-              <Field Name="Symptom" Type="System.String">
-                <xsl:value-of select="$subjectRaw"/>
-              </Field>
-
-              <!-- Description = full email body -->
-              <Field Name="Description" Type="System.String">
-                <xsl:value-of select="$body"/>
-              </Field>
-
-              <!-- Contact detail -->
-              <Field Name="ContactDetail" Type="System.String">IAM.Management@hf.org</Field>
-
-              <!-- Required validated fields -->
-              <Field Name="ImpactedDivision" Type="System.String">CORP</Field>
-              <Field Name="Status" Type="System.String">Logged</Field>
-              <Field Name="Source" Type="System.String">Email</Field>
-
-              <!-- Incident classification - customize to match your tenant's picklists -->
-              <Field Name="Category" Type="System.String">Application Access</Field>
-              <Field Name="Subcategory" Type="System.String">Access</Field>
-
-              <!-- Urgency and Impact -->
-              <Field Name="Urgency" Type="System.String">Work Impacted</Field>
-              <Field Name="Impact" Type="System.String">Business Unit</Field>
-
-              <!-- Contact link -->
-              <Field Name="ProfileLink_RecID" Type="System.String">
-                3734B48625D043B0939456EBF5B07F43
-              </Field>
-              <Field Name="ProfileLink_Category" Type="System.String">Employee</Field>
-
-            </FieldList>
-
-          </BusinessObject>
-
+          <xsl:call-template name="Incident_IAM"/>
         </xsl:when>
 
-        <!-- ======================================================= -->
-        <!-- DEFAULT NO-MATCH CASE                                   -->
-        <!-- ======================================================= -->
+        <!-- ROUTE: EPIC INCIDENT -->
+        <xsl:when test="
+          contains($subject,'network outage')
+          or contains($subject,'vpn issue')
+          or contains($subject,'connectivity issue')
+        ">
+          <xsl:call-template name="Incident_Epic"/>
+        </xsl:when>
+
+        <!-- ROUTE: ITSM INCIDENT -->
+        <xsl:when test="
+          contains($subject,'application error')
+          or contains($subject,'app not working')
+          or contains($subject,'system error')
+        ">
+          <xsl:call-template name="Incident_ITSM"/>
+        </xsl:when>
+
+        <!-- ROUTE: SECURITY INCIDENT -->
+        <xsl:when test="
+          contains($subject,'phishing')
+          or contains($subject,'suspicious email')
+          or contains($subject,'security alert')
+        ">
+          <xsl:call-template name="Incident_Security"/>
+        </xsl:when>
+
+        <!-- DEFAULT: STANDARD INCIDENT -->
         <xsl:otherwise>
-          <!-- No ticket created -->
+          <xsl:call-template name="Incident_Standard"/>
         </xsl:otherwise>
 
       </xsl:choose>
 
     </BusinessObjectList>
+
   </xsl:template>
 
 </xsl:stylesheet>
